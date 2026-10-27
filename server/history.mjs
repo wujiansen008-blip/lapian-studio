@@ -84,6 +84,7 @@ export async function saveRecord(dataDir, payload = {}) {
     sourceId: String(payload.sourceId || ""),
     productInput: String(payload.productInput || ""),
     audienceInput: String(payload.audienceInput || ""),
+    category: String(payload.category || "未分类"),
     layer: String(analysis.layer || ""),
     opening: String(analysis.opening || ""),
     product: String(analysis.whatIsSold || analysis.product || ""),
@@ -104,6 +105,7 @@ function summarize(record, id) {
     createdAt: record.createdAt,
     fileName: record.fileName,
     duration: record.duration,
+    category: record.category || "未分类",
     layer: record.layer,
     opening: record.opening,
     product: record.product,
@@ -142,6 +144,16 @@ export async function listRecords(dataDir) {
     }
   }
   return out;
+}
+
+/** 只更新分类，不动其他字段 */
+export async function updateRecordCategory(dataDir, id, category) {
+  const safe = safeId(id);
+  const file = recordFile(dataDir, safe);
+  const record = JSON.parse(await readFile(file, "utf8"));
+  record.category = String(category || "未分类").slice(0, 20);
+  await writeFile(file, JSON.stringify(record, null, 2), "utf8");
+  return summarize(record, safe);
 }
 
 export async function getRecord(dataDir, id) {

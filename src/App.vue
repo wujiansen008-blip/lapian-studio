@@ -138,6 +138,40 @@ watch(
 
 const historyRecords = ref([]);
 const historyLoading = ref(false);
+
+/* 项目分类：素材多了必须分类，否则历史列表没法用 */
+const HISTORY_CATEGORIES = ["带货种草", "知识科普", "剧情类", "情感类", "其他", "未分类"];
+const historyFilter = ref("");
+
+const filteredHistory = computed(() => {
+  if (!historyFilter.value) return historyRecords.value;
+  return historyRecords.value.filter((r) => (r.category || "未分类") === historyFilter.value);
+});
+
+const categoryStats = computed(() => {
+  const counts = {};
+  for (const r of historyRecords.value) {
+    const c = r.category || "未分类";
+    counts[c] = (counts[c] || 0) + 1;
+  }
+  return counts;
+});
+
+async function setCategory(record, category) {
+  try {
+    const res = await fetch(`/api/history/${record.id}/category`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "保存失败");
+    record.category = data.record?.category || category;
+    appendLog(`已把「${record.fileName || "未命名"}」归到 ${record.category}`);
+  } catch (error) {
+    setStatus("error", `分类保存失败：${error.message}`);
+  }
+}
 const selectedHistory = ref([]);
 
 const health = ref(null);
@@ -2171,12 +2205,29 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+          <div v-if="historyRecords.length" class="cat-bar">
+            <button :class="['cat-chip', !historyFilter && 'active']" @click="historyFilter = ''">
+              全部 <i>{{ historyRecords.length }}</i>
+            </button>
+            <button
+              v-for="cat in HISTORY_CATEGORIES"
+              :key="cat"
+              :class="['cat-chip', historyFilter === cat && 'active']"
+              :disabled="!categoryStats[cat]"
+              @click="historyFilter = historyFilter === cat ? '' : cat"
+            >
+              {{ cat }} <i>{{ categoryStats[cat] || 0 }}</i>
+            </button>
+          </div>
           <div class="report">
             <div v-if="!historyRecords.length" class="empty small">
               还没有历史记录。每跑一次 AI 拉片会自动存档（含分镜图）。
             </div>
+            <div v-else-if="!filteredHistory.length" class="empty small">
+              这个分类下还没有记录。
+            </div>
             <div class="history-list">
-              <article v-for="rec in historyRecords" :key="rec.id" class="history-item">
+              <article v-for="rec in filteredHistory" :key="rec.id" class="history-item">
                 <label class="hi-check">
                   <input
                     type="checkbox"
@@ -2199,6 +2250,13 @@ onUnmounted(() => {
                   </div>
                 </div>
                 <div class="hi-actions">
+                  <select
+                    class="cat-select"
+                    :value="rec.category || '未分类'"
+                    @change="setCategory(rec, $event.target.value)"
+                  >
+                    <option v-for="c in HISTORY_CATEGORIES" :key="c" :value="c">{{ c }}</option>
+                  </select>
                   <button class="primary" @click="openRecord(rec.id)">载入</button>
                   <button class="mini" @click="removeRecord(rec.id)">删除</button>
                 </div>
@@ -3922,6 +3980,66 @@ button.mini {
 .sb-table {
   display: flex;
   flex-direction: column;
+}
+
+/* 历史记录分类筛选 */
+.cat-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: #8f97a6;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.cat-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: #dfe4ee;
+}
+
+.cat-chip.active {
+  border-color: var(--accent);
+  background: rgba(76, 141, 255, 0.16);
+  color: #cfe0ff;
+}
+
+.cat-chip:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cat-chip i {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.cat-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #171a21;
+  color: #9aa3b2;
+  font-size: 11px;
+  cursor: pointer;
+  max-width: 92px;
+}
+
+.cat-select:hover {
+  border-color: var(--accent);
 }
 
 /* 结构标签筛选条 */

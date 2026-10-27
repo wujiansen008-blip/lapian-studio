@@ -18,7 +18,7 @@ import {
   clipCachePath,
   exportShots,
 } from "./media.mjs";
-import { saveRecord, listRecords, getRecord, imagePath, deleteRecord } from "./history.mjs";
+import { saveRecord, listRecords, getRecord, updateRecordCategory, imagePath, deleteRecord } from "./history.mjs";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -355,6 +355,14 @@ export async function startServer({ port = 5178, dataDir, vendorDir, webDir } = 
       if (path === "/api/history" && req.method === "POST") {
         const payload = await readJson(req, 300 * 1024 * 1024);
         const summary = await saveRecord(dataDir, payload);
+        json(res, 200, { ok: true, record: summary });
+        return;
+      }
+
+      const categoryMatch = path.match(/^\/api\/history\/([a-z0-9-]{8,64})\/category$/i);
+      if (categoryMatch && req.method === "POST") {
+        const payload = await readJson(req, 64 * 1024);
+        const summary = await updateRecordCategory(dataDir, categoryMatch[1], payload.category);
         json(res, 200, { ok: true, record: summary });
         return;
       }
