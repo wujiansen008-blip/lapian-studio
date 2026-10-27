@@ -1,6 +1,6 @@
 {
   "name": "lapian-studio",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "短视频爆款拉片工作台",
   "type": "module",
@@ -49,11 +49,16 @@
     ],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "shortcutName": "拉片工作台"
     }
   }
 }

@@ -85,19 +85,29 @@
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
   th { color: var(--muted); font-weight: 400; font-size: 12px; }
   td:first-child { color: var(--muted); width: 96px; }
+
+  .brand { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; }
+  .logo { width: 68px; height: 68px; border-radius: 15px; flex: 0 0 auto; }
+  .brand h1 { margin: 0 0 4px; }
+  .brand .sub { margin-bottom: 0; }
   .foot { color: #5a6274; font-size: 12px; text-align: center; margin-top: 30px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>拉片工作台</h1>
-  <div class="sub">短视频爆款拉片工具 · 上传竞品视频，自动完成抽帧、转写、AI 拉片分析</div>
+  <div class="brand">
+    <img class="logo" src="logo.png" alt="" />
+    <div>
+      <h1>拉片工作台</h1>
+      <div class="sub">短视频爆款拉片工具 · 上传竞品视频，自动完成抽帧、转写、AI 拉片分析</div>
+    </div>
+  </div>
 
   <div class="card">
     <div class="dl">
       <div class="dl-meta">
         <strong>Windows 安装包</strong><br />
-        v0.3.0 · 529 MB · 已内置语音模型
+        v0.3.1 · 529 MB · 已内置语音模型
       </div>
       <a class="btn" href="LapianStudio-Setup-latest.exe">下载安装包</a>
     </div>

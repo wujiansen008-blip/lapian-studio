@@ -47,6 +47,7 @@ function createWindow(url) {
     minHeight: 680,
     backgroundColor: "#0f1115",
     title: "拉片工作台",
+    icon: join(__dirname, "..", isDev ? "public" : "dist", "logo.png"),
     autoHideMenuBar: true,
     show: false,
     webPreferences: {
