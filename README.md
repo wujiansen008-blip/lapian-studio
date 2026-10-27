@@ -1,82 +1,91 @@
-# 拉片工作台（lapian-studio）
+# 拉片工作台
 
-短视频爆款拉片桌面工具。本地转写 + 分镜视觉核对 + 结构化拉片报告。
+短视频爆款拉片工具。上传一条竞品视频，自动完成抽帧、转写、AI 拉片分析、投放复盘、成品对比、逐镜裂变，并把结果导出成图、CSV 或分镜视频片段。
 
-## 它做什么
+基于 Electron + Vue 3，全部数据留在本地（`%APPDATA%\lapian-studio`），只有调用大模型时才会联网。
 
-三个工作模式，顶栏切换：
+## 六个页面
 
-**① 拉片分析** — 上传一条素材，得到可执行的拉片报告：
-- **口播转写**：本地 whisper.cpp，免费、不出网
-- **分镜核对**：等分抽帧 → 拼成联系表 → 视觉模型逐格描述画面
-- **方法论拆解**：内容三层分类、21 式黄金 3 秒、六线脚本法、情绪曲线
+| 页面 | 作用 |
+|---|---|
+| 拉片分析 | 14 项脚本总结 + 4 维画面总结 + 六线脚本 + 分镜六件套 + 剪映脚本 |
+| 分镜拉片 | 横向矩阵，每格是**可播放的分镜视频**，不是静帧 |
+| 投放复盘 | 4 张投放截图 → 指引消耗 / 峰值流失 / 下步动作 |
+| 终局对比 | 固定 4 段（开头钩子 / 卖点铺垫 / 信任补强 / 结尾转化）对标 vs 成品 |
+| 逐镜裂变 | 10 字段产品资料 → 每镜 3 条口播 + 3-5 条画面 |
+| 历史记录 | 自动存档，支持全选导出 CSV（可直接导入飞书表格） |
 
-**② 投放复盘** — 上传四张千川后台截图（数据总览 / 点赞 / 流失 / 点击），
-结合拉片结论判断该继续投、优化后再投还是停投，并给出带时间点的修改动作。
+## 安装
 
-**③ 终局对比** — 上传对标视频 + 成品视频，左右配对逐镜比较，
-13 项维度打分，输出「差在哪一秒、怎么改、验收标准是什么」。
+下载 `拉片工作台 Setup x.x.x.exe` 安装即可。安装包已内置 ffmpeg 和 whisper 模型，装完就能用。
 
-**④ 逐镜裂变** — 把拉片结果转成槽位矩阵，一条爆款裂变出 N 条变体：
-每个分镜产出 3 条口播、3-5 条画面、2-3 条字幕，附组合规则（顺序锁定 / 随机允许 / 绑定 / 禁混）与验证指标。
+## 模型配置
 
-## 技术结构
+设置面板里分**两组**，这点很重要：
 
+**文本模型** — 用于逐镜裂变的文案生成，便宜的模型就够
 ```
-electron/main.cjs      主进程，启动本地服务并加载界面
-server/index.mjs       本地 HTTP 服务（127.0.0.1:5178）
-server/tasks.mjs       三个 AI 任务（拉片分析 / 投放复盘 / 终局对比）
-server/prompts.mjs     方法论提示词（可直接修改）
-server/ai.mjs          OpenAI 兼容调用层，任意供应商可换
-server/transcribe.mjs  whisper.cpp 调用
-src/App.vue            界面
-src/lib/frames.js      抽帧 + 联系表拼图（纯 Canvas，不依赖 ffmpeg）
-src/lib/localAnalysis.js  本地规则引擎（零成本初判）
+Base URL   https://api.deepseek.com
+模型       deepseek-flash
 ```
 
-## 快速开始
+**视觉模型** — 用于拉片分析 / 投放复盘 / 终局对比，**必须支持图片输入**
+```
+Base URL   https://dashscope.aliyuncs.com/compatible-mode/v1
+模型       qwen3-vl-plus
+```
+
+视觉模型可以来自另一家服务商（填独立的 Key 即可）。
+
+### 一个已经踩过的坑
+
+**DeepSeek 的 API 不支持图片。** 收到图片后它会替换成 `[Unsupported Image]` 占位符，模型看不到画面，输出全是"待核对 / 无法判断"。拉片分析必须用支持视觉的模型：
+
+- 阿里云百炼 `qwen3-vl-plus`（推荐，国内直连）
+- 智谱 `glm-4v-plus`
+- 豆包 Vision
+- OpenAI `gpt-4o` / Claude（需代理）
+
+判断一个 Key 属于哪家、能不能用视觉，直接请求 `/v1/models` 看返回码最准，别猜格式。
+
+## 从源码运行
 
 ```bash
 npm install
-npm run dev            # 终端 A：启动前端
-npm run electron:dev   # 终端 B：启动桌面壳
+npm run dev          # 前端调试
+npm run electron:dev # 桌面版（开发模式）
+npm run start        # 构建 + 启动
 ```
 
 打包：
 
 ```bash
-npm run dist
+npm run dist         # 生成安装包（dist/）
 ```
 
-## 必须先做的两件配置
+国内网络建议加镜像：
 
-1. **转写引擎**：把 whisper.cpp 的 `whisper-cli.exe` 与依赖 dll 放到
-   `vendor/whispercpp/bin/win32-x64/`，模型放到 `vendor/whispercpp/models/ggml-small.bin`。
-2. **模型 API**：在设置里填 Base URL + API Key + 模型名。必须选**支持视觉**的模型
-   （拉片分析要读分镜图）。OpenAI 兼容接口均可：OpenAI、豆包、通义、智谱、硅基流动、自建中转。
+```bash
+export ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+export ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-builder-binaries/"
+```
 
-## 分镜导出
+## 数据位置
 
-拉片完成后，左栏「分镜导出」可把每个分镜按区间切成独立 mp4（内置 ffmpeg，h264/aac），
-选一个目录即可批量导出，文件名形如 `S01_00m00s000-00m03s000.mp4`，直接交给剪辑师。
+```
+%APPDATA%\lapian-studio\
+  settings.json      模型配置（含 API Key，注意不要提交）
+  history\           拉片历史，每次分析自动存档
+  media-cache\       源视频与切片缓存
+```
 
-源视频会在上传时按 SHA256 缓存到 `%APPDATA%\lapian-studio\media-cache\sources\`，
-同一个文件重复上传不会重复占空间。ffmpeg 位于 `vendor/ffmpeg/win32-x64/ffmpeg.exe`。
+## 已知限制
 
-## 成本说明
+- **字幕 OCR** 代码已完成（`src/lib/ocr.js`），但中文语言包（约 20MB）需首次联网下载。离线部署：把 `chi_sim.traineddata.gz` 放进 `public/tesseract/` 后重新构建。
+- **飞书双表写入**未实现，目前用 CSV 导出代替。
+- 分镜视频播放依赖源视频缓存；缓存被清后历史记录只能看截图。
+- 安装包未做代码签名，Windows 首次运行可能提示"未知发布者"。
 
-- 抽帧、拼图、转写、本地初判、分镜切片：全部本地，零成本
-- 只有 AI 拉片 / 复盘 / 对比 / 裂变会产生模型费用
-  （拉片一次约 1~3 张联系表 + 8k 输出 token；裂变输出上限 16k token，耗时 2-4 分钟）
+## 技术栈
 
-## 文档
-
-- `docs/01-逆向技术规格.md`：完整工艺参数与输出 schema
-- `docs/02-0.1.18差异与补齐.md`：与原版最新版的差异盘点、已补/未补清单
-- `docs/prompts/`：方法论提示词说明
-- `server/prompts-core.mjs`：四套提示词逐字原文（自动提取）
-
-## 边界
-
-本项目的业务逻辑参考自对某商业软件的静态分析，**代码全部重写**，不含其源码、图标、品牌与授权计费体系。
-`whisper.cpp` 与 ggml 模型为 MIT 许可，可自由使用。
+Electron 33 · Vue 3 · Vite 6 · ffmpeg（抽帧 / 切片）· whisper.cpp（本地转写）· tesseract.js（OCR）· html2canvas（报告导出）
