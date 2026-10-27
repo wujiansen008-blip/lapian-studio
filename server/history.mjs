@@ -85,6 +85,7 @@ export async function saveRecord(dataDir, payload = {}) {
     productInput: String(payload.productInput || ""),
     audienceInput: String(payload.audienceInput || ""),
     category: String(payload.category || "未分类"),
+    notes: normalizeNotes(payload.notes),
     layer: String(analysis.layer || ""),
     opening: String(analysis.opening || ""),
     product: String(analysis.whatIsSold || analysis.product || ""),
@@ -99,6 +100,24 @@ export async function saveRecord(dataDir, payload = {}) {
   return summarize(record, id);
 }
 
+/** 笔记结构：general 为整片判断，frames 按分镜下标存逐镜笔记 */
+function normalizeNotes(input) {
+  const raw = input && typeof input === "object" ? input : {};
+  const frames = {};
+  const src = raw.frames && typeof raw.frames === "object" ? raw.frames : {};
+  for (const [k, v] of Object.entries(src)) {
+    const text = String(v || "").slice(0, 4000);
+    if (text.trim()) frames[String(k)] = text;
+  }
+  return { general: String(raw.general || "").slice(0, 8000), frames };
+}
+
+function notesFilled(notes) {
+  if (!notes) return false;
+  if (String(notes.general || "").trim()) return true;
+  return Object.values(notes.frames || {}).some((v) => String(v || "").trim());
+}
+
 function summarize(record, id) {
   return {
     id,
@@ -106,6 +125,7 @@ function summarize(record, id) {
     fileName: record.fileName,
     duration: record.duration,
     category: record.category || "未分类",
+    hasNotes: notesFilled(record.notes),
     layer: record.layer,
     opening: record.opening,
     product: record.product,
@@ -144,6 +164,16 @@ export async function listRecords(dataDir) {
     }
   }
   return out;
+}
+
+/** 只更新笔记，不动其他字段 */
+export async function updateRecordNotes(dataDir, id, notes) {
+  const safe = safeId(id);
+  const file = recordFile(dataDir, safe);
+  const record = JSON.parse(await readFile(file, "utf8"));
+  record.notes = normalizeNotes(notes);
+  await writeFile(file, JSON.stringify(record, null, 2), "utf8");
+  return { ok: true, hasNotes: notesFilled(record.notes) };
 }
 
 /** 只更新分类，不动其他字段 */

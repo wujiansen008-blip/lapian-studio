@@ -139,6 +139,36 @@ watch(
 const historyRecords = ref([]);
 const historyLoading = ref(false);
 
+/* 拉片笔记：挂在当前记录上，整片一份 + 逐镜一份 */
+const currentRecordId = ref("");
+const myNotes = ref({ general: "", frames: {} });
+let notesTimer = null;
+
+async function flushNotes() {
+  if (!currentRecordId.value) return;
+  try {
+    await postJson(`/api/history/${currentRecordId.value}/notes`, { notes: myNotes.value });
+    setStatus("ok", "笔记已保存");
+  } catch (error) {
+    setStatus("error", `笔记保存失败：${error.message}`);
+  }
+}
+
+function scheduleNotesSave() {
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(flushNotes, 900);
+}
+
+function editFrameNote(index, value) {
+  myNotes.value.frames = { ...myNotes.value.frames, [index]: value };
+  scheduleNotesSave();
+}
+
+function editGeneralNote(value) {
+  myNotes.value.general = value;
+  scheduleNotesSave();
+}
+
 /* 项目分类：素材多了必须分类，否则历史列表没法用 */
 const HISTORY_CATEGORIES = ["带货种草", "知识科普", "剧情类", "情感类", "其他", "未分类"];
 const historyFilter = ref("");
@@ -782,6 +812,11 @@ async function openRecord(id) {
     file.value = null;
     videoUrl.value = "";
     sourceId.value = rec.sourceId || "";
+    currentRecordId.value = id;
+    myNotes.value = {
+      general: String(rec.notes?.general || ""),
+      frames: rec.notes?.frames && typeof rec.notes.frames === "object" ? { ...rec.notes.frames } : {},
+    };
     mode.value = "lapian";
     tab.value = "report";
 
@@ -918,6 +953,11 @@ async function saveCurrentRecord(payloadAnalysis, local) {
       analysis: payloadAnalysis,
       frames: frames.value,
     });
+    currentRecordId.value = saved.record.id;
+    // 把刚写的笔记一并挂到新记录上
+    if (myNotes.value.general || Object.keys(myNotes.value.frames).length) {
+      await postJson(`/api/history/${saved.record.id}/notes`, { notes: myNotes.value }).catch(() => {});
+    }
     appendLog(`已存入历史：${saved.record.id}`);
   } catch (error) {
     appendLog(`历史保存失败（不影响本次结果）：${error.message}`);
@@ -1642,6 +1682,19 @@ onUnmounted(() => {
                 交叉核对 {{ analysis.crossCheck.score ?? "-" }} 分 · {{ analysis.crossCheck.note || "" }}
               </div>
             </template>
+
+            <div v-if="analysis" class="my-note-card">
+              <h4>我的判断</h4>
+              <textarea
+                class="note-general"
+                :value="myNotes.general"
+                placeholder="这条片子给我的启发，我能怎么用在自己的内容上…（停止输入后自动保存）"
+                @input="editGeneralNote($event.target.value)"
+              ></textarea>
+              <div class="note-hint">
+                {{ currentRecordId ? "已挂到历史记录，随时可改" : "分析完成后会自动存档，笔记一并保存" }}
+              </div>
+            </div>
           </div>
 
           <div v-else-if="tab === 'local'" class="report">
@@ -1868,6 +1921,18 @@ onUnmounted(() => {
                 <p class="sb-muted">画面：{{ col.visual.slice(0, 28) }}</p>
                 <p class="sb-text">口播：{{ col.speech }}</p>
               </template>
+            </div>
+          </div>
+
+          <div class="sb-row sb-note-row">
+            <div class="sb-label">我的笔记</div>
+            <div v-for="col in filteredColumns" :key="'n' + col.index" class="sb-cell">
+              <textarea
+                class="note-input"
+                :value="myNotes.frames[col.index] || ''"
+                placeholder="这条能用在…"
+                @input="editFrameNote(col.index, $event.target.value)"
+              ></textarea>
             </div>
           </div>
         </div>
@@ -4353,6 +4418,74 @@ button.mini {
   color: #6b7280;
   text-align: center;
   line-height: 18px;
+}
+
+/* 拉片笔记 */
+.note-input {
+  width: 100%;
+  min-height: 62px;
+  resize: vertical;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #dfe4ee;
+  font-size: 11px;
+  line-height: 1.55;
+  padding: 6px 8px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.note-input::placeholder { color: #4b5261; }
+
+.note-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(76, 141, 255, 0.06);
+}
+
+.my-note-card {
+  margin-top: 16px;
+  padding: 14px 15px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.my-note-card h4 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ec0ff;
+  letter-spacing: 0.3px;
+}
+
+.note-general {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.25);
+  color: #dfe4ee;
+  font-size: 12px;
+  line-height: 1.65;
+  padding: 9px 11px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.note-general::placeholder { color: #4b5261; }
+
+.note-general:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.note-hint {
+  margin-top: 7px;
+  font-size: 10px;
+  color: #5a6274;
 }
 
 /* 结构标签筛选条 */
