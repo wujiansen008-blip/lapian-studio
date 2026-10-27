@@ -1179,6 +1179,30 @@ const filteredColumns = computed(() => {
   return storyboardColumns.value.filter((c) => c.structureTag === tagFilter.value);
 });
 
+/* 时间轴视图 */
+const sbView = ref("table");
+
+const timelineBlocks = computed(() => {
+  const total = Number(meta.value.duration) || 0;
+  if (!total) return [];
+  return filteredColumns.value.map((col) => {
+    const left = (col.start / total) * 100;
+    const width = Math.max(((col.end - col.start) / total) * 100, 0.6);
+    return { ...col, leftPct: left, widthPct: Math.min(width, 100 - left) };
+  });
+});
+
+const timelineTicks = computed(() => {
+  const total = Number(meta.value.duration) || 0;
+  if (!total) return [];
+  const step = total > 180 ? 30 : total > 90 ? 15 : total > 45 ? 10 : 5;
+  const out = [];
+  for (let t = 0; t <= total + 0.01; t += step) {
+    out.push({ t, pct: Math.min((t / total) * 100, 100) });
+  }
+  return out;
+});
+
 /* 各标签命中数量，用于顶部统计 */
 const tagStats = computed(() => {
   const counts = {};
@@ -1648,6 +1672,10 @@ onUnmounted(() => {
           <em v-if="meta.duration">· {{ formatTime(meta.duration) }}</em>
         </div>
         <div class="sb-right">
+          <div class="view-switch">
+            <button :class="['vs-btn', sbView === 'table' && 'on']" @click="sbView = 'table'">表格</button>
+            <button :class="['vs-btn', sbView === 'timeline' && 'on']" @click="sbView = 'timeline'">时间轴</button>
+          </div>
           <div class="sb-legend">
             <span class="dot d1">3.99</span>
             <span class="dot d2">3.2</span>
@@ -1677,6 +1705,106 @@ onUnmounted(() => {
 
       <div v-if="!storyboardColumns.length" class="empty small">
         还没有分镜。先去「拉片分析」上传视频并抽帧。
+      </div>
+
+      <div v-else-if="sbView === 'timeline'" class="tl-scroll">
+        <div class="tl-inner">
+          <div class="tl-thumbs">
+            <div
+              v-for="b in timelineBlocks"
+              :key="'t' + b.index"
+              class="tl-thumb"
+              :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+              @click="openLightbox(b.index)"
+            >
+              <img v-if="b.image" :src="b.image" alt="" />
+              <span class="tl-thumb-no">{{ b.index + 1 }}</span>
+            </div>
+          </div>
+
+          <div class="tl-ruler">
+            <span
+              v-for="tk in timelineTicks"
+              :key="'k' + tk.t"
+              class="tl-tick"
+              :style="{ left: tk.pct + '%' }"
+            >
+              {{ formatTime(tk.t) }}
+            </span>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">画面</div>
+            <div class="tl-lane">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'v' + b.index"
+                class="tl-bar bar-visual"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+                :title="'分镜 ' + (b.index + 1) + ' · ' + b.timeRange"
+                @click="openLightbox(b.index)"
+              >
+                {{ b.index + 1 }}
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">口播</div>
+            <div class="tl-lane">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'a' + b.index"
+                class="tl-bar bar-speech"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+                :title="b.role"
+              ></div>
+            </div>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">字幕</div>
+            <div class="tl-lane lane-tall">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'s' + b.index"
+                class="tl-bar bar-sub"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+                :title="b.speech"
+              >
+                {{ b.speech }}
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">结构</div>
+            <div class="tl-lane">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'g' + b.index"
+                class="tl-bar bar-tag"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%', '--tag': tagColor(b.structureTag) }"
+              >
+                {{ b.structureTag || "—" }}
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">时长</div>
+            <div class="tl-lane lane-small">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'d' + b.index"
+                class="tl-bar bar-dur"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+              >
+                {{ (b.end - b.start).toFixed(1) }}s
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-else class="sb-scroll">
@@ -4040,6 +4168,185 @@ button.mini {
 
 .cat-select:hover {
   border-color: var(--accent);
+}
+
+/* 视图切换 */
+.view-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.vs-btn {
+  padding: 4px 11px;
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  color: #8b93a3;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vs-btn:hover { color: #dfe4ee; }
+
+.vs-btn.on {
+  background: rgba(76, 141, 255, 0.2);
+  color: #bcd4ff;
+}
+
+/* 多轨时间轴 */
+.tl-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px 30px;
+}
+
+.tl-inner {
+  position: relative;
+  min-width: 880px;
+}
+
+.tl-thumbs {
+  position: relative;
+  height: 64px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0d0f14;
+  border: 1px solid var(--border);
+}
+
+.tl-thumb {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: hidden;
+  border-right: 1px solid rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.tl-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tl-thumb-no {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  font-size: 9.5px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.66);
+  color: #cfd6e2;
+}
+
+.tl-ruler {
+  position: relative;
+  height: 17px;
+  margin: 0 0 9px 46px;
+}
+
+.tl-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.tl-tick::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 1px;
+  height: 4px;
+  background: #2c313d;
+}
+
+.tl-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.tl-name {
+  width: 38px;
+  flex: 0 0 38px;
+  font-size: 11px;
+  color: #8b93a3;
+  line-height: 26px;
+  text-align: right;
+}
+
+.tl-lane {
+  position: relative;
+  flex: 1;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 5px;
+}
+
+.lane-tall { height: 46px; }
+.lane-tall + .tl-name, .lane-tall { line-height: 1; }
+.lane-small { height: 22px; }
+
+.tl-bar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 22px;
+  padding: 0 5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.bar-visual {
+  background: rgba(76, 141, 255, 0.26);
+  border: 1px solid rgba(76, 141, 255, 0.6);
+  color: #bcd4ff;
+  text-align: center;
+  cursor: pointer;
+}
+
+.bar-visual:hover { background: rgba(76, 141, 255, 0.45); }
+
+.bar-speech {
+  background: rgba(70, 200, 140, 0.28);
+  border: 1px solid rgba(70, 200, 140, 0.55);
+}
+
+.bar-sub {
+  background: rgba(150, 120, 240, 0.18);
+  border: 1px solid rgba(150, 120, 240, 0.45);
+  color: #d3c8ff;
+  line-height: 1.35;
+  padding: 3px 5px;
+  white-space: normal;
+  overflow: hidden;
+  font-size: 10px;
+}
+
+.bar-tag {
+  background: color-mix(in srgb, var(--tag) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tag) 55%, transparent);
+  color: var(--tag);
+  text-align: center;
+}
+
+.bar-dur {
+  background: transparent;
+  color: #6b7280;
+  text-align: center;
+  line-height: 18px;
 }
 
 /* 结构标签筛选条 */
