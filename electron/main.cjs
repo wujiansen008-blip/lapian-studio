@@ -1,6 +1,6 @@
 const { app, BrowserWindow, shell, dialog, ipcMain } = require("electron");
 const { join } = require("node:path");
-const { writeFile } = require("node:fs/promises");
+const { writeFile, mkdir } = require("node:fs/promises");
 const { existsSync } = require("node:fs");
 const { pathToFileURL } = require("node:url");
 
@@ -78,6 +78,18 @@ app.whenReady().then(async () => {
   });
 
   ipcMain.handle("get-downloads-dir", () => app.getPath("downloads"));
+
+  // 模型不随安装包分发，引导用户把 ggml-small.bin 放进去
+  ipcMain.handle("open-model-dir", async () => {
+    const dir = join(process.resourcesPath, "vendor", "whispercpp", "models");
+    try {
+      if (!existsSync(dir)) await mkdir(dir, { recursive: true });
+      await shell.openPath(dir);
+      return { ok: true, path: dir };
+    } catch (error) {
+      return { ok: false, error: error?.message || String(error) };
+    }
+  });
 
   ipcMain.handle("save-file", async (_event, fileName, content) => {
     try {

@@ -17,7 +17,20 @@
 
 ## 安装
 
-下载 `拉片工作台 Setup x.x.x.exe` 安装即可。安装包已内置 ffmpeg 和 whisper 模型，装完就能用。
+下载 `拉片工作台 Setup x.x.x.exe`（约 115MB）安装，然后**手动放一次语音模型**：
+
+1. 打开应用 → 左栏「流水线」卡片会提示「语音模型未安装」
+2. 点 **打开模型目录**，会自动打开并创建该目录：
+   ```
+   安装目录\resources\vendor\whispercpp\models\
+   ```
+3. 把 `ggml-small.bin`（约 466MB）放进去，重启应用
+
+模型下载：https://huggingface.co/ggerganov/whisper.cpp/tree/main （选 `ggml-small.bin`）
+
+**为什么模型不放进安装包**：它有 466MB，会让安装包从 115MB 膨胀到 530MB，且以后每次更新都得重下。现在模型装一次永久复用，安装包保持轻量。
+
+**不装模型也能用**：抽帧、AI 拉片分析、终局对比、逐镜裂变、导出全部正常，只是没有口播文本，报告里的「三段论」「口播文案」会缺内容。
 
 ## 模型配置
 
@@ -81,6 +94,7 @@ export ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-
 
 ## 已知限制
 
+- **安装包不含语音模型**：首次安装需手动放 `ggml-small.bin`（见「安装」一节），界面会提示路径。
 - **字幕 OCR** 代码已完成（`src/lib/ocr.js`），但中文语言包（约 20MB）需首次联网下载。离线部署：把 `chi_sim.traineddata.gz` 放进 `public/tesseract/` 后重新构建。
 - **飞书双表写入**未实现，目前用 CSV 导出代替。
 - 分镜视频播放依赖源视频缓存；缓存被清后历史记录只能看截图。

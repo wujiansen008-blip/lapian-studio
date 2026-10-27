@@ -29,8 +29,14 @@
   "build": {
     "appId": "studio.lapian.app",
     "productName": "拉片工作台",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
+      "!/dist/win-unpacked/**",
+      "!/dist/*.exe",
+      "!/dist/*.blockmap",
       "electron/**/*",
       "server/**/*",
       "package.json"
@@ -38,7 +44,8 @@
     "extraResources": [
       {
         "from": "vendor",
-        "to": "vendor"
+        "to": "vendor",
+        "filter": ["**/*", "!whispercpp/models/*.bin"]
       }
     ],
     "win": {

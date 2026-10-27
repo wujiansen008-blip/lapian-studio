@@ -15,4 +15,6 @@ contextBridge.exposeInMainWorld("lapian", {
   getDownloadsDir: () => ipcRenderer.invoke("get-downloads-dir"),
   /** 把文本内容写成文件（CSV / JSON 等）。 */
   saveFile: (fileName, content) => ipcRenderer.invoke("save-file", fileName, content),
+  /** 打开语音模型目录（模型不随安装包分发，需用户手动放入）。 */
+  openModelDir: () => ipcRenderer.invoke("open-model-dir"),
 });

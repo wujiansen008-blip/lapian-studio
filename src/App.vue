@@ -373,6 +373,17 @@ async function doTranscribe() {
   }
 }
 
+/* ---------- 语音模型目录 ---------- */
+async function openModelDir() {
+  const result = await window.lapian?.openModelDir?.();
+  if (result?.ok) {
+    appendLog(`已打开模型目录：${result.path}`);
+    setStatus("running", "把 ggml-small.bin 放进这个目录，然后重启应用");
+  } else if (result?.error) {
+    setStatus("error", `打开目录失败：${result.error}`);
+  }
+}
+
 /* ---------- 画面字幕 OCR ---------- */
 async function doOcr() {
   if (!file.value || !videoEl.value) {
@@ -1399,6 +1410,12 @@ onUnmounted(() => {
           <button class="wide" :disabled="!canTranscribe" @click="doTranscribe">
             {{ busy.transcribe ? "转写中…" : "① 本地转写口播" }}
           </button>
+          <div v-if="health?.whisper && !health.whisper.modelExists" class="model-alert">
+            <strong>语音模型未安装</strong>
+            <p>拉片分析仍可跑，但没有口播文本，结果会缺「三段论 / 口播文案」。</p>
+            <code>{{ health.whisper.model }}</code>
+            <button class="mini" @click="openModelDir">打开模型目录</button>
+          </div>
           <button class="wide" :disabled="!file || busy.ocr" @click="doOcr">
             {{ busy.ocr ? "识别字幕中…" : "识别画面字幕（OCR）" }}
           </button>
@@ -3528,6 +3545,48 @@ button.mini {
   font-size: 11px;
   color: #9ec0ff;
   letter-spacing: 0.3px;
+}
+
+/* 模型缺失提示 */
+.model-alert {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  background: rgba(240, 178, 106, 0.1);
+  border: 1px solid rgba(240, 178, 106, 0.35);
+}
+
+.model-alert strong {
+  display: block;
+  font-size: 11.5px;
+  color: #f0b26a;
+  font-weight: 500;
+}
+
+.model-alert p {
+  margin: 5px 0 7px;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: #c9b79a;
+}
+
+.model-alert code {
+  display: block;
+  margin-bottom: 8px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 9.5px;
+  color: #9aa3b2;
+  word-break: break-all;
+  line-height: 1.45;
+}
+
+.model-alert .mini {
+  width: 100%;
+  padding: 5px 0;
+  font-size: 11px;
+  margin-top: 0;
 }
 
 /* 分镜大图预览 */
