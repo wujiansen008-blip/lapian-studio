@@ -3,7 +3,8 @@ import { createServer as createNetServer } from "node:net";
 import { createReadStream } from "node:fs";
 import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { existsSync, statSync } from "node:fs";
-import { join, normalize, extname } from "node:path";
+import { join, normalize, extname, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { transcribeLocal, whisperStatus } from "./transcribe.mjs";
 import { buildTranscribePrompt } from "./prompts.mjs";
 import { testConnection } from "./ai.mjs";
@@ -96,6 +97,8 @@ function decodeHeader(value) {
 export async function startServer({ port = 5178, dataDir, vendorDir, webDir } = {}) {
   if (!dataDir) throw new Error("startServer 需要 dataDir");
   const settingsPath = join(dataDir, "settings.json");
+  // 团队预置配置：随安装包分发，首次启动时写入，之后以用户自己的配置为准
+  const seedPath = join(dirname(fileURLToPath(import.meta.url)), "seed-settings.json");
   await mkdir(dataDir, { recursive: true });
 
   const loadSettings = async () => {
@@ -103,7 +106,15 @@ export async function startServer({ port = 5178, dataDir, vendorDir, webDir } = 
       const raw = await readFile(settingsPath, "utf8");
       return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
     } catch {
-      return { ...DEFAULT_SETTINGS };
+      // 首次运行：拿预置配置初始化，目标用户开箱即用
+      try {
+        const seed = JSON.parse(await readFile(seedPath, "utf8"));
+        const merged = { ...DEFAULT_SETTINGS, ...seed };
+        await writeFile(settingsPath, JSON.stringify(merged, null, 2), "utf8");
+        return merged;
+      } catch {
+        return { ...DEFAULT_SETTINGS };
+      }
     }
   };
 

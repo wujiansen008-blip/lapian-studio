@@ -5,3 +5,4 @@ vendor/whispercpp/models/*.bin
 vendor/whispercpp/bin/darwin-*/
 *.log
 .DS_Store
+server/seed-settings.json

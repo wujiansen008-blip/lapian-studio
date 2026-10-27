@@ -44,8 +44,7 @@
     "extraResources": [
       {
         "from": "vendor",
-        "to": "vendor",
-        "filter": ["**/*", "!whispercpp/models/*.bin"]
+        "to": "vendor"
       }
     ],
     "win": {
