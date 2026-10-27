@@ -169,6 +169,27 @@ function editGeneralNote(value) {
   scheduleNotesSave();
 }
 
+/** 从时间轴的笔记点跳回表格并聚焦到对应输入框 */
+function focusNote(index) {
+  sbView.value = "table";
+  nextTick(() => {
+    const inputs = document.querySelectorAll(".sb-table .note-input");
+    const el = inputs[index];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    el.focus();
+  });
+}
+
+/** 时间轴上有笔记的分镜 */
+const notedFrames = computed(() => {
+  const out = {};
+  for (const [k, v] of Object.entries(myNotes.value.frames || {})) {
+    if (String(v || "").trim()) out[k] = String(v).trim();
+  }
+  return out;
+});
+
 /* 项目分类：素材多了必须分类，否则历史列表没法用 */
 const HISTORY_CATEGORIES = ["带货种草", "知识科普", "剧情类", "情感类", "其他", "未分类"];
 const historyFilter = ref("");
@@ -1840,6 +1861,25 @@ onUnmounted(() => {
                 :style="{ left: b.leftPct + '%', width: b.widthPct + '%', '--tag': tagColor(b.structureTag) }"
               >
                 {{ b.structureTag || "—" }}
+              </div>
+            </div>
+          </div>
+
+          <div class="tl-row">
+            <div class="tl-name">笔记</div>
+            <div class="tl-lane lane-note">
+              <div
+                v-for="b in timelineBlocks"
+                :key="'m' + b.index"
+                class="tl-note-slot"
+                :style="{ left: b.leftPct + '%', width: b.widthPct + '%' }"
+              >
+                <span
+                  v-if="notedFrames[b.index]"
+                  class="tl-note-dot"
+                  :title="notedFrames[b.index]"
+                  @click="focusNote(b.index)"
+                ></span>
               </div>
             </div>
           </div>
@@ -4411,6 +4451,36 @@ button.mini {
   border: 1px solid color-mix(in srgb, var(--tag) 55%, transparent);
   color: var(--tag);
   text-align: center;
+}
+
+.lane-note {
+  height: 14px;
+  background: transparent;
+}
+
+.tl-note-slot {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tl-note-dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f0b26a;
+  box-shadow: 0 0 0 2px rgba(240, 178, 106, 0.2);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.tl-note-dot:hover {
+  background: #ffc978;
+  transform: scale(1.45);
 }
 
 .bar-dur {
