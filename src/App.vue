@@ -1095,6 +1095,19 @@ const STORYBOARD_ROWS = [
   { key: "speech", label: "口播文案" },
 ];
 
+/* 结构标签：拉片的核心分类，可筛选可统计 */
+const STRUCTURE_TAGS = [
+  { key: "开场钩子", color: "#E24B4A" },
+  { key: "情绪铺垫", color: "#EF9F27" },
+  { key: "核心观点", color: "#378ADD" },
+  { key: "案例细节", color: "#639922" },
+  { key: "情感升华", color: "#1D9E75" },
+  { key: "结尾引导", color: "#7F77DD" },
+];
+
+const tagColor = (tag) => STRUCTURE_TAGS.find((t) => t.key === tag)?.color || "#5F6573";
+const tagFilter = ref("");
+
 const storyboardColumns = computed(() => {
   const list = frames.value || [];
   if (!list.length) return [];
@@ -1115,6 +1128,7 @@ const storyboardColumns = computed(() => {
       start: Number(frame.start) || 0,
       end: Number(frame.end) || 0,
       timeRange: `${formatTime(frame.start)}-${formatTime(frame.end)}`,
+      structureTag: String(note.structureTag || "").trim(),
       visual: String(note.visualDescription || "").trim() || "该分镜未识别到画面描述，先跑一次 AI 拉片",
       layer: layerText,
       perspective: perspectiveText,
@@ -1125,8 +1139,25 @@ const storyboardColumns = computed(() => {
   });
 });
 
-async function downloadFrame(column) {
-  const frame = frames.value[column.index];
+/* 按结构标签筛选后的分镜列 */
+const filteredColumns = computed(() => {
+  if (!tagFilter.value) return storyboardColumns.value;
+  return storyboardColumns.value.filter((c) => c.structureTag === tagFilter.value);
+});
+
+/* 各标签命中数量，用于顶部统计 */
+const tagStats = computed(() => {
+  const counts = {};
+  for (const col of storyboardColumns.value) {
+    if (!col.structureTag) continue;
+    counts[col.structureTag] = (counts[col.structureTag] || 0) + 1;
+  }
+  return counts;
+});
+
+const hasTags = computed(() => Object.keys(tagStats.value).length > 0);
+
+async function downloadFrame(column) {  const frame = frames.value[column.index];
   if (!frame) {
     setStatus("error", "这一镜没有数据");
     return;
@@ -1577,7 +1608,9 @@ onUnmounted(() => {
       <div class="sb-head-bar">
         <div class="sb-title">
           分镜拉片
-          <em v-if="storyboardColumns.length">{{ storyboardColumns.length }} 个分镜</em>
+          <em v-if="filteredColumns.length">
+            {{ filteredColumns.length }}<template v-if="tagFilter"> / {{ storyboardColumns.length }}</template> 个分镜
+          </em>
           <em v-if="meta.duration">· {{ formatTime(meta.duration) }}</em>
         </div>
         <div class="sb-right">
@@ -1592,22 +1625,45 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <div v-if="hasTags" class="tag-bar">
+        <button :class="['tag-chip', !tagFilter && 'active']" @click="tagFilter = ''">
+          全部 <i>{{ storyboardColumns.length }}</i>
+        </button>
+        <button
+          v-for="tag in STRUCTURE_TAGS"
+          :key="tag.key"
+          :class="['tag-chip', tagFilter === tag.key && 'active']"
+          :style="{ '--tag': tag.color }"
+          :disabled="!tagStats[tag.key]"
+          @click="tagFilter = tagFilter === tag.key ? '' : tag.key"
+        >
+          <span class="tag-dot"></span>{{ tag.key }} <i>{{ tagStats[tag.key] || 0 }}</i>
+        </button>
+      </div>
+
       <div v-if="!storyboardColumns.length" class="empty small">
         还没有分镜。先去「拉片分析」上传视频并抽帧。
       </div>
 
       <div v-else class="sb-scroll">
-        <div class="sb-table" :style="{ minWidth: 160 + storyboardColumns.length * 240 + 'px' }">
+        <div class="sb-table" :style="{ minWidth: 160 + filteredColumns.length * 240 + 'px' }">
           <div class="sb-row sb-headrow">
             <div class="sb-label">分镜</div>
-            <div v-for="col in storyboardColumns" :key="'h' + col.index" class="sb-cell sb-headcell">
-              分镜{{ col.index + 1 }}
+            <div v-for="col in filteredColumns" :key="'h' + col.index" class="sb-cell sb-headcell">
+              <span>分镜{{ col.index + 1 }}</span>
+              <span
+                v-if="col.structureTag"
+                class="sb-tag"
+                :style="{ '--tag': tagColor(col.structureTag) }"
+              >
+                {{ col.structureTag }}
+              </span>
             </div>
           </div>
 
           <div v-for="row in STORYBOARD_ROWS" :key="row.key" class="sb-row">
             <div class="sb-label">{{ row.label }}</div>
-            <div v-for="col in storyboardColumns" :key="row.key + col.index" class="sb-cell">
+            <div v-for="col in filteredColumns" :key="row.key + col.index" class="sb-cell">
               <template v-if="row.key === 'visual'">
                 <video
                   v-if="col.clipUrl"
@@ -3866,6 +3922,85 @@ button.mini {
 .sb-table {
   display: flex;
   flex-direction: column;
+}
+
+/* 结构标签筛选条 */
+.tag-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: #8f97a6;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.tag-chip:hover:not(:disabled) {
+  border-color: var(--tag, var(--accent));
+  color: #dfe4ee;
+}
+
+.tag-chip.active {
+  border-color: var(--tag, var(--accent));
+  background: color-mix(in srgb, var(--tag, var(--accent)) 16%, transparent);
+  color: #f0f3f8;
+}
+
+.tag-chip:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.tag-chip i {
+  font-style: normal;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.tag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tag, #5f6573);
+  flex: 0 0 auto;
+}
+
+.sb-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--tag);
+  background: color-mix(in srgb, var(--tag) 18%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--tag) 45%, transparent);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.sb-headcell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
 }
 
 .sb-row {
