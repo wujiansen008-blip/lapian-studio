@@ -1374,6 +1374,14 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <div v-if="health?.settings && !health.settings.apiKeySet" class="setup-banner">
+      <span>
+        <strong>还差一步</strong>
+        ：模型地址和模型名已经预填好，只需要填一次 API Key 就能开始分析
+      </span>
+      <button class="mini" @click="openSettings">去填 Key</button>
+    </div>
+
     <!-- ================= 拉片分析 ================= -->
     <main v-if="mode === 'lapian'" class="grid">
       <section class="col left">
@@ -3548,6 +3556,33 @@ button.mini {
 }
 
 /* 模型缺失提示 */
+.setup-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 16px;
+  background: rgba(240, 178, 106, 0.12);
+  border-bottom: 1px solid rgba(240, 178, 106, 0.35);
+  font-size: 12px;
+  color: #e0c9a5;
+}
+
+.setup-banner strong {
+  color: #f0b26a;
+  font-weight: 500;
+}
+
+.setup-banner .mini {
+  flex: 0 0 auto;
+  padding: 5px 14px;
+  font-size: 11px;
+  margin-top: 0;
+  background: rgba(240, 178, 106, 0.18);
+  border: 1px solid rgba(240, 178, 106, 0.5);
+  color: #f0b26a;
+}
+
 .model-alert {
   margin-top: 10px;
   padding: 10px 11px;
