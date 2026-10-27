@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>拉片工作台 · 下载</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262b36;
+    --text: #e6e8ee;
+    --muted: #8b93a3;
+    --accent: #4c8dff;
+    --warn: #f0b26a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.65;
+    padding: 40px 20px 60px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: 0.5px; }
+  .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 26px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 22px;
+    margin-bottom: 16px;
+  }
+  .dl {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .dl-meta { font-size: 13px; color: var(--muted); }
+  .dl-meta strong { color: var(--text); font-size: 15px; font-weight: 500; }
+  a.btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    padding: 11px 26px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: filter 0.15s;
+  }
+  a.btn:hover { filter: brightness(1.12); }
+  h2 {
+    font-size: 14px;
+    margin: 0 0 14px;
+    color: #9ec0ff;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  ol, ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 9px; font-size: 13.5px; }
+  li:last-child { margin-bottom: 0; }
+  code {
+    background: rgba(255,255,255,0.07);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-family: Consolas, Monaco, monospace;
+  }
+  .tip {
+    border-left: 3px solid var(--warn);
+    background: rgba(240,178,106,0.08);
+    padding: 11px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #d9c2a0;
+    margin-top: 14px;
+  }
+  .tip strong { color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 400; font-size: 12px; }
+  td:first-child { color: var(--muted); width: 96px; }
+  .foot { color: #5a6274; font-size: 12px; text-align: center; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>拉片工作台</h1>
+  <div class="sub">短视频爆款拉片工具 · 上传竞品视频，自动完成抽帧、转写、AI 拉片分析</div>
+
+  <div class="card">
+    <div class="dl">
+      <div class="dl-meta">
+        <strong>Windows 安装包</strong><br />
+        v0.3.0 · 529 MB · 已内置语音模型
+      </div>
+      <a class="btn" href="LapianStudio-Setup-latest.exe">下载安装包</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>安装步骤</h2>
+    <ol>
+      <li>点上面的按钮下载安装包，双击安装（Windows 可能提示"未知发布者"，点「更多信息」→「仍要运行」）</li>
+      <li>安装完成后打开，顶部会出现橙色提示条 → 点 <strong>「去填 Key」</strong></li>
+      <li>填入你的 API Key 后保存（地址和模型名已经预填好，不用管）</li>
+    </ol>
+    <div class="tip">
+      <strong>还没有 Key？</strong>去 <a href="https://bailian.console.aliyun.com" style="color:#9ec0ff">阿里云百炼</a> 开通，新用户有免费额度。开通后在「API-KEY 管理」里创建一个，复制 <code>sk-</code> 开头的字符串即可。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>怎么用</h2>
+    <ol>
+      <li>左上角「选择视频」，上传一条竞品视频（建议 30 秒 ~ 2 分钟）</li>
+      <li>等抽帧完成 → 点「① 本地转写口播」（可选，但强烈建议，否则报告缺口播文案）</li>
+      <li>点「② AI 拉片分析」，等 1-2 分钟出结果</li>
+      <li>左侧六个页面分别是：拉片分析 / 分镜拉片 / 投放复盘 / 终局对比 / 逐镜裂变 / 历史记录</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>常见问题</h2>
+    <table>
+      <tr><th>现象</th><th>说明</th></tr>
+      <tr>
+        <td>点分析没反应</td>
+        <td>看顶部是否还有橙色提示条，说明 Key 没填或填错</td>
+      </tr>
+      <tr>
+        <td>报告全是"待核对"</td>
+        <td>Key 对应的模型不支持读图。必须用视觉模型（已预填 qwen3-vl-plus）</td>
+      </tr>
+      <tr>
+        <td>转写很慢</td>
+        <td>本地跑 whisper，一条 1 分钟视频约 30-60 秒，正常</td>
+      </tr>
+      <tr>
+        <td>分析要等很久</td>
+        <td>首次 1-2 分钟正常（要看 9 张分镜图），别以为卡死了</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="foot">数据全部保存在本地电脑，只有调用大模型时才会联网</div>
+</div>
+</body>
+</html>
