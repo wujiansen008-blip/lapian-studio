@@ -4209,7 +4209,7 @@ button.mini {
 
 .tl-thumbs {
   position: relative;
-  height: 64px;
+  height: 170px;
   margin-bottom: 8px;
   border-radius: 6px;
   overflow: hidden;
@@ -4222,22 +4222,28 @@ button.mini {
   top: 0;
   height: 100%;
   overflow: hidden;
-  border-right: 1px solid rgba(0, 0, 0, 0.55);
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
   cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tl-thumb:hover {
+  background: rgba(76, 141, 255, 0.08);
 }
 
 .tl-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #06070a;
   display: block;
 }
 
 .tl-thumb-no {
   position: absolute;
-  left: 3px;
-  bottom: 3px;
-  font-size: 9.5px;
+  left: 4px;
+  top: 4px;
+  font-size: 10px;
   padding: 0 4px;
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.66);
