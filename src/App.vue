@@ -321,6 +321,12 @@ async function pickFile(event) {
   const chosen = event.target.files?.[0];
   event.target.value = "";
   if (!chosen) return;
+  await handleVideoFile(chosen);
+}
+
+/** 选择文件和拖拽上传共用这一条链路 */
+async function handleVideoFile(chosen) {
+  if (!chosen) return;
 
   file.value = chosen;
   frames.value = [];
@@ -343,6 +349,57 @@ async function pickFile(event) {
     setStatus("error", error.message);
     appendLog(`载入失败：${error.message}`);
   }
+}
+
+/* ---------- 拖拽上传 ---------- */
+const dragActive = ref(false);
+let dragDepth = 0;
+
+function isVideoFile(f) {
+  return /^video\//i.test(f.type || "") || /\.(mp4|mov|mkv|avi|webm|m4v|flv|wmv|mpg|mpeg)$/i.test(f.name || "");
+}
+
+function hasFiles(e) {
+  return [...(e.dataTransfer?.types || [])].includes("Files");
+}
+
+function onWindowDragEnter(e) {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth += 1;
+  dragActive.value = true;
+}
+
+function onWindowDragOver(e) {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+}
+
+function onWindowDragLeave(e) {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dragActive.value = false;
+}
+
+async function onWindowDrop(e) {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0;
+  dragActive.value = false;
+
+  const files = [...(e.dataTransfer?.files || [])];
+  if (!files.length) return;
+
+  const video = files.find(isVideoFile);
+  if (!video) {
+    setStatus("error", `拖进来的是「${files[0].name || "文件"}」，不是视频。支持 mp4 / mov / mkv / webm 等格式。`);
+    return;
+  }
+
+  mode.value = "lapian";
+  await nextTick();
+  await handleVideoFile(video);
 }
 
 async function doExtractFrames(explicitVideo) {
@@ -1477,15 +1534,33 @@ async function exportCurrent() {
 onMounted(() => {
   loadHealth();
   window.addEventListener("keydown", onLightboxKey);
+  window.addEventListener("dragenter", onWindowDragEnter);
+  window.addEventListener("dragover", onWindowDragOver);
+  window.addEventListener("dragleave", onWindowDragLeave);
+  window.addEventListener("drop", onWindowDrop);
 });
 
 onUnmounted(() => {
   window.removeEventListener("keydown", onLightboxKey);
+  window.removeEventListener("dragenter", onWindowDragEnter);
+  window.removeEventListener("dragover", onWindowDragOver);
+  window.removeEventListener("dragleave", onWindowDragLeave);
+  window.removeEventListener("drop", onWindowDrop);
 });
 </script>
 
 <template>
   <div class="shell">
+    <div v-if="dragActive" class="drop-mask">
+      <div class="drop-box">
+        <svg class="drop-icon" viewBox="0 0 48 48" fill="none">
+          <path d="M24 11v19M24 30l-8-8M24 30l8-8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M12 37h24" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+        </svg>
+        <p>松手即可载入视频</p>
+        <span>支持 mp4 / mov / mkv / webm / avi</span>
+      </div>
+    </div>
     <header class="topbar">
       <div class="brand">
         <span class="dot" />
@@ -2641,6 +2716,49 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 拖拽上传遮罩 */
+.drop-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(8, 10, 14, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drop-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+  padding: 52px 74px;
+  border-radius: 18px;
+  border: 2px dashed rgba(76, 141, 255, 0.5);
+  background: rgba(76, 141, 255, 0.06);
+  color: #6fa0ff;
+}
+
+.drop-icon {
+  width: 52px;
+  height: 52px;
+}
+
+.drop-box p {
+  margin: 0;
+  font-size: 17px;
+  color: #dfe8ff;
+  letter-spacing: 0.3px;
+}
+
+.drop-box span {
+  font-size: 12px;
+  color: #7d8698;
+}
+
+/* 拖拽上传遮罩 end */
+
 .shell {
   display: flex;
   flex-direction: column;
