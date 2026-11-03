@@ -1281,6 +1281,7 @@ const storyboardColumns = computed(() => {
       end: Number(frame.end) || 0,
       timeRange: `${formatTime(frame.start)}-${formatTime(frame.end)}`,
       structureTag: String(note.structureTag || "").trim(),
+      tagReason: String(note.structureTagReason || "").trim(),
       visual: String(note.visualDescription || "").trim() || "该分镜未识别到画面描述，先跑一次 AI 拉片",
       layer: layerText,
       perspective: perspectiveText,
@@ -1934,6 +1935,7 @@ onUnmounted(() => {
                 :key="'g' + b.index"
                 class="tl-bar bar-tag"
                 :style="{ left: b.leftPct + '%', width: b.widthPct + '%', '--tag': tagColor(b.structureTag) }"
+                :title="b.tagReason || b.structureTag"
               >
                 {{ b.structureTag || "—" }}
               </div>
@@ -1985,6 +1987,7 @@ onUnmounted(() => {
                 v-if="col.structureTag"
                 class="sb-tag"
                 :style="{ '--tag': tagColor(col.structureTag) }"
+                :title="col.tagReason || col.structureTag"
               >
                 {{ col.structureTag }}
               </span>
