@@ -16,6 +16,7 @@ import html2canvas from "html2canvas";
 const MODES = [
   { id: "lapian", label: "拉片分析" },
   { id: "storyboard", label: "分镜拉片" },
+  { id: "rewrite", label: "脚本改写" },
   { id: "review", label: "投放复盘" },
   { id: "compare", label: "终局对比" },
   { id: "fission", label: "逐镜裂变" },
@@ -856,6 +857,115 @@ async function doFission() {
     appendLog(`裂变失败：${error.message}`);
   } finally {
     busy.value.fission = false;
+  }
+}
+
+/* ---------- 模式六：脚本改写 ---------- */
+const rewriteBenchmark = ref("");
+const rewriteScript = ref("");
+const rewriteBusy = ref(false);
+const rewriteMeta = ref(null);
+const rewriteTarget = ref({
+  name: "",
+  persona: "",
+  category: "",
+  sellingPoints: "",
+  specs: "",
+  price: "",
+  proof: "",
+  audience: "",
+  painPoints: "",
+  scenario: "",
+  compliance: "",
+  cta: "",
+  extra: "",
+});
+
+const REWRITE_FIELDS = [
+  { key: "name", label: "目标名称", placeholder: "如：橙言牙套收纳盒", required: true },
+  { key: "sellingPoints", label: "核心卖点", placeholder: "如：手动旋转沥水、自带镜子、小刷子收纳", required: true },
+  { key: "audience", label: "目标用户", placeholder: "如：刚戴牙套的年轻人、正畸人群" },
+  { key: "category", label: "品类/场景", placeholder: "如：口腔护理收纳" },
+  { key: "persona", label: "人设/品牌", placeholder: "如：正畸过来人" },
+  { key: "price", label: "价格/优惠", placeholder: "如：69 元两件" },
+  { key: "proof", label: "信任背书", placeholder: "如：已售 2 万件、复购率 30%" },
+  { key: "painPoints", label: "竞品痛点", placeholder: "如：普通盒子积水发霉" },
+  { key: "scenario", label: "转化场景", placeholder: "如：刷牙时顺手沥水" },
+  { key: "cta", label: "行动引导", placeholder: "如：点击左下角下单" },
+  { key: "compliance", label: "禁用词/合规", placeholder: "如：不能说医疗效果" },
+  { key: "extra", label: "补充说明", placeholder: "其他要强调或回避的内容" },
+];
+
+const rewriteReady = computed(
+  () =>
+    rewriteBenchmark.value.trim().length >= 30 &&
+    String(rewriteTarget.value.name || "").trim() &&
+    String(rewriteTarget.value.sellingPoints || "").trim(),
+);
+
+function useTranscript() {
+  const text = String(transcriptText.value || "").trim();
+  if (!text) {
+    setStatus("error", "当前没有转写稿。先上传视频转写，或从历史记录载入一条。");
+    return;
+  }
+  rewriteBenchmark.value = text;
+  appendLog(`已把转写稿填入原稿（${text.length} 字）`);
+}
+
+async function runScriptRewrite() {
+  if (!rewriteReady.value || rewriteBusy.value) return;
+  rewriteBusy.value = true;
+  rewriteScript.value = "";
+  rewriteMeta.value = null;
+  setStatus("running", "正在改写脚本…");
+  try {
+    const payload = await postJson("/api/script-rewrite", {
+      benchmark: rewriteBenchmark.value.trim(),
+      target: rewriteTarget.value,
+    });
+    rewriteScript.value = payload.script || "";
+    rewriteMeta.value = {
+      scriptLength: payload.scriptLength,
+      benchmarkLength: payload.benchmarkLength,
+      ratio: payload.ratio,
+    };
+    appendLog(`脚本改写完成：原稿 ${payload.benchmarkLength} 字 → 改写 ${payload.scriptLength} 字（${Math.round((payload.ratio || 0) * 100)}%）`);
+    setStatus("ok", `改写完成（${payload.scriptLength} 字）`);
+  } catch (error) {
+    setStatus("error", `改写失败：${error.message}`);
+    appendLog(`改写失败：${error.message}`);
+  } finally {
+    rewriteBusy.value = false;
+  }
+}
+
+async function copyRewrite() {
+  if (!rewriteScript.value) return;
+  try {
+    await navigator.clipboard.writeText(rewriteScript.value);
+    setStatus("ok", "改写结果已复制");
+  } catch {
+    setStatus("error", "复制失败，请手动选中");
+  }
+}
+
+function exportRewrite() {
+  if (!rewriteScript.value) return;
+  const name = `改写脚本-${String(rewriteTarget.value.name || "未命名").slice(0, 12)}.txt`;
+  if (window.lapian?.saveFile) {
+    window.lapian
+      .saveFile(name, rewriteScript.value)
+      .then((r) => {
+        if (r?.ok) setStatus("ok", `已导出到 ${r.path}`);
+      })
+      .catch((e) => setStatus("error", `导出失败：${e.message}`));
+  } else {
+    const blob = new Blob([rewriteScript.value], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
   }
 }
 
@@ -2491,6 +2601,65 @@ onUnmounted(() => {
           </div>
         </div>
       </section>
+    </main>
+
+    <!-- ================= 脚本改写 ================= -->
+    <main v-else-if="mode === 'rewrite'" class="rw-main">
+      <div class="rw-cols">
+        <div class="rw-left">
+          <section class="card">
+            <div class="card-head">
+              <h2>原稿 <em>{{ rewriteBenchmark.length }} 字</em></h2>
+              <div class="hi-tools">
+                <button class="mini-btn" @click="useTranscript">用当前转写稿</button>
+                <button class="mini-btn" @click="rewriteBenchmark = ''">清空</button>
+              </div>
+            </div>
+            <textarea
+              v-model="rewriteBenchmark"
+              class="rw-input"
+              placeholder="粘贴你要复刻结构的爆款脚本原文。改写的核心是保留它的句式、节奏、情绪和成交钩子，只把内容换成你的产品。"
+            ></textarea>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2>目标画像 <em>* 为必填</em></h2>
+            </div>
+            <div class="rw-form">
+              <label v-for="f in REWRITE_FIELDS" :key="f.key" class="rw-field">
+                <span>{{ f.label }}<i v-if="f.required">*</i></span>
+                <input v-model="rewriteTarget[f.key]" :placeholder="f.placeholder" />
+              </label>
+            </div>
+            <button class="primary rw-go" :disabled="!rewriteReady || rewriteBusy" @click="runScriptRewrite">
+              {{ rewriteBusy ? "改写中…" : "开始改写" }}
+            </button>
+            <p class="rw-hint">
+              只输出脚本正文，不含分析。字数会自动对齐原稿比例（短稿 ≥90%，中稿 95%-110%，长稿 90%-105%）。
+            </p>
+          </section>
+        </div>
+
+        <section class="card rw-right">
+          <div class="card-head">
+            <h2>
+              改写结果
+              <em v-if="rewriteMeta">
+                {{ rewriteMeta.scriptLength }} 字 · 原稿的 {{ Math.round((rewriteMeta.ratio || 0) * 100) }}%
+              </em>
+            </h2>
+            <div class="hi-tools">
+              <button class="mini-btn" :disabled="!rewriteScript" @click="copyRewrite">复制</button>
+              <button class="mini-btn" :disabled="!rewriteScript" @click="exportRewrite">导出 txt</button>
+            </div>
+          </div>
+          <pre v-if="rewriteScript" class="rw-output">{{ rewriteScript }}</pre>
+          <div v-else class="empty small">
+            填好左侧的原稿和目标画像，点「开始改写」，脚本会出现在这里。
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- ================= 历史记录 ================= -->
@@ -4678,6 +4847,116 @@ button.mini {
   font-size: 10px;
   color: #5a6274;
 }
+
+/* 脚本改写 */
+.rw-main {
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.rw-cols {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.95fr) 1.05fr;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+.rw-left {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.rw-input {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.22);
+  color: #dfe4ee;
+  font-size: 12.5px;
+  line-height: 1.75;
+  padding: 11px 13px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.rw-input::placeholder { color: #4b5261; }
+.rw-input:focus { outline: none; border-color: var(--accent); }
+
+.rw-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  padding: 12px 14px 4px;
+}
+
+.rw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #8b93a3;
+}
+
+.rw-field i {
+  font-style: normal;
+  color: #e0605c;
+  margin-left: 2px;
+}
+
+.rw-field input {
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: #dfe4ee;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.rw-field input::placeholder { color: #454b58; font-size: 11px; }
+.rw-field input:focus { outline: none; border-color: var(--accent); background: rgba(76, 141, 255, 0.06); }
+
+.rw-go {
+  margin: 12px 14px 6px;
+  width: calc(100% - 28px);
+}
+
+.rw-hint {
+  margin: 0 14px 14px;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #5a6274;
+}
+
+.rw-right {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rw-output {
+  flex: 1;
+  margin: 0;
+  padding: 16px 18px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.95;
+  color: #e6eaf2;
+  letter-spacing: 0.2px;
+}
+
+/* 脚本改写 end */
 
 /* 结构标签筛选条 */
 .tag-bar {

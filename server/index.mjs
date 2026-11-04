@@ -19,6 +19,7 @@ import {
   exportShots,
 } from "./media.mjs";
 import { saveRecord, listRecords, getRecord, updateRecordCategory, updateRecordNotes, imagePath, deleteRecord } from "./history.mjs";
+import { runRewrite } from "./rewrite.mjs";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -319,6 +320,14 @@ export async function startServer({ port = 5178, dataDir, vendorDir, webDir } = 
         const payload = await readJson(req, 200 * 1024 * 1024);
         const config = await resolveConfig(true);
         const result = await runAnalyze({ config, payload });
+        json(res, 200, { ok: true, ...result });
+        return;
+      }
+
+      if (req.method === "POST" && path === "/api/script-rewrite") {
+        const payload = await readJson(req, 4 * 1024 * 1024);
+        const config = await resolveConfig(true);
+        const result = await runRewrite({ config, payload });
         json(res, 200, { ok: true, ...result });
         return;
       }
